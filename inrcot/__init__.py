@@ -23,7 +23,7 @@
 :source: <https://github.com/ampledata/inrcot>
 """
 
-from .constants import DEFAULT_POLL_INTERVAL, DEFAULT_COT_STALE, DEFAULT_COT_TYPE
+from .constants import DEFAULT_POLL_INTERVAL, DEFAULT_COT_STALE, DEFAULT_COT_TYPE, DEFAULT_FEED_USERNAME
 
 from .functions import create_tasks, inreach_to_cot, split_feed, create_feeds
 

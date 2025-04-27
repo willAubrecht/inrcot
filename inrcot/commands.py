@@ -108,6 +108,8 @@ def cli(app_name: str = "inrcot") -> None:
 
     config_file = cli_args.get("CONFIG_FILE")
     if config_file and os.path.exists(config_file):
+        # disable the asyncio "Executing took ... seconds" warning
+        logging.getLogger('asyncio').setLevel(logging.ERROR)
         logging.info("Reading configuration from %s", config_file)
         orig_config.read(config_file)
     else:

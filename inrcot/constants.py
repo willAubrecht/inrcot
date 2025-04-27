@@ -29,3 +29,6 @@ DEFAULT_COT_STALE: str = "600"
 
 # Default CoT type. 'a-f-g-e-s' works in iTAK, WinTAK & ATAK...
 DEFAULT_COT_TYPE: str = "a-f-g-e-s"
+
+# Default username for Garmin MapShare, as the username is anyways ignored
+DEFAULT_FEED_USERNAME: str = "InReach2TAK"

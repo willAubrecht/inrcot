@@ -22,6 +22,7 @@ import xml.etree.ElementTree as ET
 
 from configparser import ConfigParser
 from typing import Optional, Set
+from pyproj import CRS, Transformer
 
 from aiohttp import BasicAuth
 
@@ -75,10 +76,10 @@ def make_feed_conf(section) -> dict:
     }
     # Support "private" MapShare feeds:
     feed_pass: str = section.get("FEED_PASSWORD")
-    feed_user: str = section.get("FEED_USERNAME")
+    feed_user: str = section.get("FEED_USERNAME", inrcot.DEFAULT_FEED_USERNAME)
     if feed_pass and feed_user:
         feed_auth: BasicAuth = BasicAuth(feed_user, feed_pass)
-        feed_conf["feed_auth"] = str(feed_auth)
+        feed_conf["feed_auth"] = feed_auth
 
     return feed_conf
 
@@ -117,15 +118,24 @@ def inreach_to_cot_xml(
     if not all([lat, lon]):
         return None
 
+    # Define coordinate reference systems
+    crs_msl = CRS.from_epsg(5499) # Example: EPSG code for a MSL-based vertical CRS
+    crs_wgs84 = CRS.from_epsg(4979) # EPSG code for WGS84 (latitude, longitude, ellipsoidal height)
+
+    # Create a transformer and transform MSL -> WSG84
+    transformer = Transformer.from_crs(crs_msl, crs_wgs84)
+    hae_latitude, hae_longitude, hae_alt = transformer.transform(lat, lon, alt)
+
+
     time = when
 
-    # We want to use localtime + stale instead of lastUpdate time + stale
-    # This means a device could go offline and we might not know it?
+    # Use the devices last update time to calculate the stale time
+    # If the device goes offline it will be removed
     _cot_stale = feed_conf.get("cot_stale", inrcot.DEFAULT_COT_STALE)
     cot_stale = (
-        datetime.datetime.now(datetime.timezone.utc)
+        datetime.datetime.strptime(time, "%Y-%m-%dT%H:%M:%SZ")
         + datetime.timedelta(seconds=int(_cot_stale))
-    ).strftime(pytak.ISO_8601_UTC)
+    ).isoformat(sep='T',timespec='auto') # Convert to ISO_8601_UTC
 
     cot_type = feed_conf.get("cot_type", inrcot.DEFAULT_COT_TYPE)
 
@@ -133,9 +143,9 @@ def inreach_to_cot_xml(
     callsign = name
 
     point = ET.Element("point")
-    point.set("lat", str(lat))
-    point.set("lon", str(lon))
-    point.set("hae", "9999999.0")
+    point.set("lat", str(hae_latitude))
+    point.set("lon", str(hae_longitude))
+    point.set("hae", str(hae_alt))
     point.set("ce", "9999999.0")
     point.set("le", "9999999.0")
 
@@ -169,6 +179,8 @@ def inreach_to_cot_xml(
     root.set("stale", cot_stale)
     root.append(point)
     root.append(detail)
+
+    print("User:", name, "/ Lat:", str(lat), "/ Lon:", str(lon), "/ Alt:", str(alt), "/ Updated:", time, "/ Stale:", cot_stale)
 
     return root
 
